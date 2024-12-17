@@ -12,17 +12,20 @@ def preprocess_image(image, label):
     image = tf.image.random_flip_up_down(image)
     image = tf.image.random_brightness(image, max_delta=0.1)
     image = tf.image.random_contrast(image, lower=0.8, upper=1.2)
+    image = tf.image.random_jpeg_quality(image, min_jpeg_quality=75, max_jpeg_quality=100)
     return image, label
 
-batch_size = 32
+batch_size = 64
 learning_rate = 0.001
 epsilon = 1e-07
 
 dataset, info = tfds.load('malaria', split='train', with_info=True, as_supervised=True)
 dataset_size = info.splits['train'].num_examples
-train_size = int(0.8 * dataset_size)
-val_size = dataset_size - train_size
+sample_size = int(0.2 * dataset_size)  
+train_size = int(0.8 * sample_size)
 
+val_size = sample_size - train_size
+dataset = dataset.take(sample_size)
 train_dataset = dataset.take(train_size).map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE)
 val_dataset = dataset.skip(train_size).map(preprocess_image, num_parallel_calls=tf.data.AUTOTUNE)
 
@@ -43,7 +46,7 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate, ep
 
 start_time = time.time()
 history = model.fit(train_dataset.batch(batch_size),
-                    epochs=20, 
+                    epochs=50, 
                     validation_data=val_dataset.batch(batch_size),
                     verbose=1)
 training_time = time.time() - start_time
